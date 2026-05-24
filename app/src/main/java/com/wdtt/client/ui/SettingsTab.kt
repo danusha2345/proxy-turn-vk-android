@@ -1028,8 +1028,8 @@ fun SecretsDialog(
                 OutlinedTextField(
                     value = passwordInput,
                     onValueChange = { passwordInput = it },
-                    label = { Text("Заданный пароль туннеля") },
-                    placeholder = { Text("Придумайте надежный пароль") },
+                    label = { Text("Пароль туннеля") },
+                    placeholder = { Text("Введите пароль") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
