@@ -236,7 +236,17 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
 
     val scrollState = rememberScrollState()
 
-    val isPeerValid = peerInput.isNotBlank() && !peerInput.contains(":")
+    // Адрес может быть "host" или "host:port". Если порт указан — он должен быть валидным (1..65535).
+    val isPeerValid = peerInput.isNotBlank() && run {
+        val idx = peerInput.lastIndexOf(':')
+        if (idx < 0) {
+            true
+        } else {
+            val host = peerInput.substring(0, idx)
+            val port = peerInput.substring(idx + 1).toIntOrNull()
+            host.isNotBlank() && port != null && port in 1..65535
+        }
+    }
     val isHashesValid = combinedHashes.isNotBlank()
     val isValid = isPeerValid && isHashesValid && savedConnectionPassword.isNotBlank() && !hasInputHashErrors
     val effectiveServerDtlsPort = if (manualPortsEnabled) serverDtlsPortInput.toIntOrNull()?.coerceIn(1, 65535) ?: 56000 else 56000
@@ -257,7 +267,8 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
         }
         val intent = Intent(context, TunnelService::class.java).apply {
             action = "START"
-            putExtra("peer", "$peerInput:$effectiveServerDtlsPort")
+            // Если пользователь указал порт в адресе (host:port) — берём его, иначе подставляем дефолтный/ручной.
+            putExtra("peer", if (peerInput.contains(":")) peerInput else "$peerInput:$effectiveServerDtlsPort")
             putExtra("vk_hashes", combinedHashes)
             putExtra("secondary_vk_hash", "")
             putExtra("workers_per_hash", workersInput.toInt())
@@ -360,8 +371,8 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
                     peerInput = it.filter { c -> c != ' ' }
                     scheduleSave()
                 },
-                label = { Text("IP сервера или домен (без порта)") },
-                placeholder = { Text("1.2.3.4 (или test.com)") },
+                label = { Text("IP/домен сервера (можно :порт, иначе 56000)") },
+                placeholder = { Text("1.2.3.4 или 1.2.3.4:56010") },
                 singleLine = true,
                 isError = !isPeerValid && peerInput.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
