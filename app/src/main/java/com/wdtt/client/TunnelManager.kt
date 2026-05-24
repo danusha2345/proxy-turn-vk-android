@@ -1,6 +1,8 @@
 package com.wdtt.client
 
 import android.content.Context
+import android.content.Intent
+import com.wdtt.client.xray.XrayVpnService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -207,6 +209,87 @@ object TunnelManager {
                 e.printStackTrace()
                 running.value = false
             }
+        }
+    }
+
+    // ─── Режим VLESS-через-ВК ───
+    // peer = vless:// ссылка. libvkturn.so (-vless) поднимает TCP-relay через звонок ВК,
+    // XrayVpnService запускает встроенный Xray (VLESS+REALITY) поверх этого relay.
+    private const val VLESS_RELAY_PORT = 10808
+
+    fun startVlessTunnel(appContext: Context, params: TunnelParams) {
+        lastContext = appContext
+        currentParams = params
+        scope.launch {
+            try {
+                val ctx = appContext
+                val vlessLink = params.peer.trim()
+                // host:port из vless://uuid@HOST:PORT?... — это адрес vk-turn сервера (для -peer relay)
+                val afterAt = vlessLink.substringAfter("@", "").substringBefore("?")
+                val hostPort = afterAt.substringBefore("/").trim()
+                if (hostPort.isBlank() || !hostPort.contains(":")) {
+                    updateLog("vless_error", "Ошибка: не извлечь host:port из vless://", 99, true)
+                    running.value = false
+                    return@launch
+                }
+
+                val hashList = params.vkHashes.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(3)
+                if (hashList.isEmpty()) {
+                    updateLog("hash_error", "Ошибка: Хеш не указан", 99, true)
+                    running.value = false
+                    return@launch
+                }
+
+                val totalWorkers = params.workersPerHash.coerceIn(1, 128)
+                updateLog("config_info", "[VLESS] relay → $hostPort | потоков=$totalWorkers", 1)
+
+                val binaryPath = ctx.applicationInfo.nativeLibraryDir + "/libvkturn.so"
+                if (!File(binaryPath).exists()) {
+                    updateLog("vless_bin_error", "Ошибка: libvkturn.so не найден", 99, true)
+                    running.value = false
+                    return@launch
+                }
+
+                // 1. Запускаем vk-turn relay (-vless): TCP 127.0.0.1:RELAY → TURN ВК (с авто-капчей)
+                // vk-turn-proxy парсит -vk-link через Split("join/") — принимает ОДИН хеш (не список через запятую)
+                val cmd = mutableListOf(
+                    binaryPath,
+                    "-peer", hostPort,
+                    "-vk-link", hashList.first(),
+                    "-listen", "127.0.0.1:$VLESS_RELAY_PORT",
+                    "-vless",
+                    "-n", totalWorkers.toString()
+                )
+                val pb = ProcessBuilder(cmd)
+                pb.directory(ctx.filesDir)
+                pb.redirectErrorStream(true)
+                pb.environment()["LD_LIBRARY_PATH"] = ctx.applicationInfo.nativeLibraryDir
+                process = pb.start()
+                processStartedAtMs = System.currentTimeMillis()
+                running.value = true
+                startLogReader()
+
+                // 2. Даём relay подняться, затем стартуем Xray-VPN поверх него
+                delay(2000)
+                val intent = Intent(ctx, XrayVpnService::class.java).apply {
+                    action = XrayVpnService.ACTION_START
+                    putExtra(XrayVpnService.EXTRA_VLESS, vlessLink)
+                    putExtra(XrayVpnService.EXTRA_RELAY_PORT, VLESS_RELAY_PORT)
+                }
+                ctx.startService(intent)
+                updateLog("vless_started", "[VLESS] relay + Xray запущены", 2)
+            } catch (e: Exception) {
+                updateLog("vless_crit_error", "VLESS ошибка запуска: ${e.message}", 99, true)
+                running.value = false
+            }
+        }
+    }
+
+    fun stopVlessTunnel(appContext: Context) {
+        runCatching {
+            appContext.startService(Intent(appContext, XrayVpnService::class.java).apply {
+                action = XrayVpnService.ACTION_STOP
+            })
         }
     }
 

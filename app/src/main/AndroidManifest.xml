@@ -41,6 +41,20 @@
                 android:value="persistent_vpn_tunnel_transport" />
         </service>
 
+        <!-- VpnService для режима VLESS-через-ВК (встроенный Xray) -->
+        <service
+            android:name=".xray.XrayVpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="persistent_vpn_tunnel_transport" />
+        </service>
+
         <activity
             android:name=".ManlCaptchaActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"

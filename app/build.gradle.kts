@@ -140,4 +140,6 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("com.wireguard.android:tunnel:1.0.20230706")
     implementation("com.github.mwiede:jsch:0.2.16")
+    // VLESS+REALITY движок: libXray.aar (gomobile-сборка xray-core), см. app/libs/
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
 }

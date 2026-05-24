@@ -236,19 +236,29 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
 
     val scrollState = rememberScrollState()
 
-    // Адрес может быть "host" или "host:port". Если порт указан — он должен быть валидным (1..65535).
+    // VLESS-режим определяется автоматически по vless:// ссылке (подключение всегда через ВК).
+    val isVless = peerInput.trim().startsWith("vless://", ignoreCase = true)
+
+    // Адрес: "host"/"host:port" (WireGuard) либо "vless://..." (VLESS).
     val isPeerValid = peerInput.isNotBlank() && run {
-        val idx = peerInput.lastIndexOf(':')
-        if (idx < 0) {
-            true
+        if (isVless) {
+            // vless://uuid@host:port?... — базовая проверка структуры
+            val rest = peerInput.trim().substring("vless://".length)
+            rest.contains("@") && rest.substringAfter("@").isNotBlank()
         } else {
-            val host = peerInput.substring(0, idx)
-            val port = peerInput.substring(idx + 1).toIntOrNull()
-            host.isNotBlank() && port != null && port in 1..65535
+            val idx = peerInput.lastIndexOf(':')
+            if (idx < 0) {
+                true
+            } else {
+                val host = peerInput.substring(0, idx)
+                val port = peerInput.substring(idx + 1).toIntOrNull()
+                host.isNotBlank() && port != null && port in 1..65535
+            }
         }
     }
     val isHashesValid = combinedHashes.isNotBlank()
-    val isValid = isPeerValid && isHashesValid && savedConnectionPassword.isNotBlank() && !hasInputHashErrors
+    // VLESS: пароль не нужен (UUID в самой ссылке). WireGuard: пароль туннеля обязателен.
+    val isValid = isPeerValid && isHashesValid && (isVless || savedConnectionPassword.isNotBlank()) && !hasInputHashErrors
     val effectiveServerDtlsPort = if (manualPortsEnabled) serverDtlsPortInput.toIntOrNull()?.coerceIn(1, 65535) ?: 56000 else 56000
     val effectiveLocalPort = if (manualPortsEnabled) portInput.toIntOrNull()?.coerceIn(1, 65535) ?: 9000 else 9000
     var pendingStartAfterVpnPermission by remember { mutableStateOf(false) }
@@ -277,6 +287,8 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
             putExtra("connection_password", savedConnectionPassword)
             putExtra("captcha_mode", effectiveCaptchaMode)
             putExtra("captcha_solve_method", effectiveCaptchaSolveMethod)
+            // vless:// → режим VLESS-через-ВК, иначе WireGuard (tcp/udp)
+            putExtra("protocol", if (isVless) "vless" else "udp")
         }
         if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent)
         else context.startService(intent)
@@ -594,7 +606,8 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            OutlinedButton(
+            // При VLESS (vless://) пароль не нужен — кнопку «Секреты» скрываем.
+            if (!isVless) OutlinedButton(
                 onClick = { showSecretsDialog = true },
                 modifier = Modifier.height(52.dp),
                 shape = RoundedCornerShape(16.dp),

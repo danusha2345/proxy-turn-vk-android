@@ -146,7 +146,12 @@ class TunnelService : Service() {
         // Вызываем всегда — дёшево, а WebView создаётся на лету при каждом запросе капчи
         CaptchaWebViewManager.onTunnelStart(applicationContext)
 
-        TunnelManager.start(this, params)
+        if (params.protocol == "vless") {
+            // VLESS-через-ВК: relay (libvkturn.so) + встроенный Xray (XrayVpnService)
+            TunnelManager.startVlessTunnel(applicationContext, params)
+        } else {
+            TunnelManager.start(this, params)
+        }
         startStatsUpdater()
     }
 
@@ -157,6 +162,7 @@ class TunnelService : Service() {
         CaptchaWebViewManager.onTunnelStop()
 
         TunnelManager.stop()
+        TunnelManager.stopVlessTunnel(applicationContext)
         releaseWakeLock()
         releaseWifiLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
