@@ -69,6 +69,7 @@
 Рабочие решения с обходом шейпинга скорости и частыми обновлениями:
 
 **Моё любимое**
+- [samosvalishe/free-turn-proxy](https://github.com/samosvalishe/free-turn-proxy) — Качественные ядра клиента и сервера с частыми обновлениями
 - [Moroka8/vk-turn-proxy](https://github.com/Moroka8/vk-turn-proxy) — Качественные ядра клиента и сервера
 
 **Android**
