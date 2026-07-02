@@ -3,7 +3,7 @@
   # WDTT — WireGuard over TURN Tunnel
 <br>
   <img src="https://img.shields.io/badge/Android-SDK_29--35-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android SDK">
-  <img src="https://img.shields.io/badge/Go-1.25-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version">
+  <img src="https://img.shields.io/badge/Go-1.26-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version">
   <img src="https://img.shields.io/badge/Kotlin-Compose-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin">
   <a href="https://github.com/amurcanov/proxy-turn-vk-android/stargazers">
     <img src="https://img.shields.io/github/stars/amurcanov/proxy-turn-vk-android?style=for-the-badge&logo=github&color=ffca28&labelColor=24292e" alt="Stars">
@@ -18,6 +18,8 @@
 ## Содержание
 
 - [Возможности Android-версии](#возможности-android-версии)
+- [Клиенты для других платформ](#клиенты-для-других-платформ)
+- [Что нового в версии 1.2.2](#что-нового-в-версии-122)
 - [Что нового в версии 1.1.8](#что-нового-в-версии-118)
 - [**Другие рабочие решения**](#другие-рабочие-решения)
 - [Как это работает](#как-это-работает)
@@ -45,6 +47,32 @@
 - **DNS fallback:** сначала используются Yandex DNS `77.88.8.8` / `77.88.8.1`, а при отказе или таймаутах выполняется fallback на системный провайдерский DNS устройства.
 - **Темы и оформление:** Material 3, Jetpack Compose, Inter, светлая/тёмная тема, Dynamic Colors на Android 12+ и встроенные палитры.
 - **Автообновления:** приложение проверяет GitHub releases, показывает диалог обновления и периодически повторяет проверку в фоне.
+
+## Клиенты для других платформ
+
+Это **основной репозиторий** семейства WDTT: помимо Android-приложения он содержит
+общее Go-ядро клиента (`go_client/`) и сервер (`server.go`), которые переиспользуют
+десктопные обёртки:
+
+| Проект | Платформа | Роль |
+|--------|-----------|------|
+| **proxy-turn-vk-android** (этот репозиторий) | Android | Приложение + ядро `go_client/` + сервер `server.go` |
+| [danusha2345/wdtt-vpn](https://github.com/danusha2345/wdtt-vpn) | Windows (Linux — только GUI) | Десктопный GUI на Wails; `wdtt-client.exe` собирается из `go_client/` |
+| [cacggghp/vk-turn-proxy](https://github.com/cacggghp/vk-turn-proxy) | — | Upstream-первоисточник протокола (VK TURN over DTLS) |
+
+## Что нового в версии 1.2.2
+
+> [!IMPORTANT]
+> Требуется актуальный сервер: выполните деплой `wdtt-server` из этой версии, чтобы
+> VK Calls captcha-free path и RTP-обфускация работали end-to-end.
+
+* **VK Calls captcha-free:** добавлен анонимный path авторизации через `api.vk.me`
+  (VK Calls), позволяющий получать TURN-учётные данные **без прохождения капчи**.
+  Включён по умолчанию (`-vk-auth-mode=vkcalls`); при недоступности — fallback на
+  прежний VK Auth с авто-капчей.
+* **RTP-обфускация:** усилена маскировка транспорта под RTP/WebRTC аудиопоток.
+* **Ядро:** обновлён `go_client` (Go 1.26) и `server.go`; тот же клиентский бинарь
+  используется в десктопном [wdtt-vpn](https://github.com/danusha2345/wdtt-vpn).
 
 ## Что нового в версии 1.1.8
 
