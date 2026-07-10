@@ -68,6 +68,38 @@ object TunnelManager {
         unreadErrorCount.value = 0
     }
 
+    private fun handleTunnelEvent(event: TunnelEventParser.Event, now: Long): Boolean {
+        when (event) {
+            is TunnelEventParser.Event.Stats -> {
+                activeWorkers.value = event.active
+                if (event.active > 0) {
+                    lastActiveAtMs = now
+                    wrapAuthTimeoutCount = 0
+                }
+                val totalMB = (event.bytesUp + event.bytesDown) / (1024.0 * 1024.0)
+                val message = "Активных: ${event.active} | Трафик: %.2f МБ".format(totalMB)
+                stats.value = message
+                updateLog("stats", "[СТАТИСТИКА] $message", 3, false)
+            }
+            is TunnelEventParser.Event.Ready ->
+                updateLog("ready", "[READY] Туннель готов к работе ✓", 2, false)
+            is TunnelEventParser.Event.Config -> {
+                val configStr = event.config.trim()
+                if (configStr.isNotEmpty()) {
+                    config.value = configStr
+                    scope.launch(Dispatchers.Main) {
+                        try {
+                            wgHelper?.startTunnel(configStr)
+                        } catch (e: Exception) {
+                            updateLog("vpn_start_error", "Ошибка запуска VPN: ${e.readableMessage()}", 99, true)
+                        }
+                    }
+                }
+            }
+        }
+        return true
+    }
+
     private var observersInitialized = false
 
     fun initObservers(context: Context) {
@@ -212,6 +244,8 @@ object TunnelManager {
                     cmd.add("-client-ids")
                     cmd.add(params.clientIds)
                 }
+                cmd.add("-obfs")
+                cmd.add(params.obfsMode)
                 cmd.add("-vk-auth-mode")
                 cmd.add(params.vkAuthMode)
 
@@ -231,6 +265,7 @@ object TunnelManager {
                 
                 val env = pb.environment()
                 env["LD_LIBRARY_PATH"] = context.applicationInfo.nativeLibraryDir
+                env["WDTT_EVENTS"] = "1"
 
                 process = pb.start()
                 processStartedAtMs = System.currentTimeMillis()
@@ -271,6 +306,11 @@ object TunnelManager {
 
                     val msgPrefixReplaced = line.replace(Regex("^\\d{4}/\\d{2}/\\d{2}\\s\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?\\s"), "")
                     val lineTrim = msgPrefixReplaced.trim()
+
+                    val event = TunnelEventParser.parse(lineTrim)
+                    if (event != null && handleTunnelEvent(event, now)) {
+                        return@forEachLine
+                    }
 
                     val isError = lineTrim.contains("Ошибка", true) || lineTrim.contains("error", true) || lineTrim.contains("FAIL", true) || lineTrim.contains("timeout", true) || lineTrim.contains("refused", true) || lineTrim.contains("FATAL_AUTH", true)
 
@@ -835,5 +875,6 @@ data class TunnelParams(
     val captchaMode: String = "auto",
     val captchaSolveMethod: String = "auto",
     val fingerprint: String = "chrome",
-    val clientIds: String = "6287487,8202606"
+    val clientIds: String = "6287487,8202606",
+    val obfsMode: String = "audio"
 )

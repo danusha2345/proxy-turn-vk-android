@@ -104,6 +104,28 @@ func TestObfsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestObfsVideoPayloadTypeCompatibility(t *testing.T) {
+	key := testKey(t, "video-password")
+	cfg := NewObfsConfig()
+	cfg.PayloadType = 96
+	payload := []byte("video-obfs-packet")
+	wire, err := obfsWrapPacket(key, payload, cfg, NewObfsState())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !obfsIsRTPPacket(wire) {
+		t.Fatal("server rejected video PT=96")
+	}
+	plain := make([]byte, len(payload))
+	n, err := obfsUnwrapPacket(key, wire, plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(plain[:n], payload) {
+		t.Fatalf("round trip = %q", plain[:n])
+	}
+}
+
 // The refactor must not change the wire format: a packet produced by the OLD
 // allocating path must decode with the NEW alloc-free path and vice versa.
 // This is the core compatibility guarantee for the iOS WRAP-A client.

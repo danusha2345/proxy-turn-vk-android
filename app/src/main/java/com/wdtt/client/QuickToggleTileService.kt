@@ -118,6 +118,7 @@ class QuickToggleTileService : TileService() {
                 putExtra("captcha_solve_method", store.captchaSolveMethod.first())
                 putExtra("fingerprint", store.selectedFingerprint.first())
                 putExtra("client_ids", store.activeClientIds.first())
+                putExtra("obfs_mode", store.obfsMode.first())
             }
         }.getOrNull()
     }

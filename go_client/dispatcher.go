@@ -31,7 +31,7 @@ func putPktBuf(b []byte) {
 }
 
 const (
-	returnChBuf = 384
+	returnChBuf = 512
 
 	// chunkSize — количество последовательных пакетов, отправляемых в один worker
 	// перед переключением на следующий.
@@ -41,14 +41,14 @@ const (
 	// интерпретирует reorder как потери → cwnd collapse → скорость single-flow
 	// падает до ~8 KB/s.
 	//
-	// С chunk=8: пакеты в пределах одного TCP congestion window (~10 пакетов при
+	// С chunk=12: пакеты в пределах одного TCP congestion window (~10 пакетов при
 	// initial cwnd) уходят через один TURN relay → прилетают по порядку.
 	// Reorder возможен только между chunk-границами, что покрывается WG replay
 	// window (2048 пакетов).
 	//
 	// Агрегатная пропускная способность не меняется — все workers загружены
 	// равномерно по-прежнему (каждый получает 1/N от общего трафика за время).
-	chunkSize = 8
+	chunkSize = 12
 )
 
 type WorkerSlot struct {
@@ -79,7 +79,7 @@ func NewDispatcher(ctx context.Context, localConn net.PacketConn, stats *Stats) 
 		cancel:    dcancel,
 		stats:     stats,
 	}
-	
+
 	empty := make([]*WorkerSlot, 0)
 	d.workers.Store(&empty)
 

@@ -158,6 +158,7 @@ func main() {
 	captchaMode := flag.String("captcha-mode", "auto", "режим обхода капчи (auto/wv/rjs)")
 	fingerprint := flag.String("fingerprint", "chrome", "браузерный фингерпринт (chrome, safari, ios, android, firefox)")
 	clientIdsFlag := flag.String("client-ids", "", "ID клиентов VK через запятую")
+	obfsMode := flag.String("obfs", "audio", "режим обфускации (audio/video)")
 
 	flag.Parse()
 	activeVKAuthMode := setVKAuthMode(*vkAuthMode)
@@ -213,11 +214,15 @@ func main() {
 	}
 	*numW = (*numW / workersPerGroup) * workersPerGroup
 
+	if *obfsMode != "video" {
+		*obfsMode = "audio"
+	}
 	tp := &TurnParams{
-		Host:    *host,
-		Port:    *port,
-		Hashes:  hashes,
-		WrapKey: wrapKey,
+		Host:     *host,
+		Port:     *port,
+		Hashes:   hashes,
+		WrapKey:  wrapKey,
+		ObfsMode: *obfsMode,
 	}
 
 	// Слушаем локально с ожиданием (если старый процесс еще не убит Parent Watcher'ом)
@@ -276,6 +281,7 @@ func main() {
 	log.Printf("[КЛИЕНТ] Слушаю: %s | Пир: %s", *listen, cleanPeerAddr)
 	log.Printf("[КЛИЕНТ] Протокол: UDP")
 	log.Printf("[КЛИЕНТ] WRAP: %s", wrapStatus)
+	log.Printf("[КЛИЕНТ] Маскировка: %s", *obfsMode)
 	log.Printf("[WRAP] Ключ выведен из пароля, режим RTP AEAD активен")
 	log.Printf("[КЛИЕНТ] Device ID: %s", *deviceID)
 	log.Printf("[КЛИЕНТ] Captcha: %s", captchaStatus)
@@ -324,6 +330,7 @@ func main() {
 			} else {
 				log.Println("[КОНФИГ] Сохранён в wg-turn.conf")
 			}
+			emitConfig(finalConf)
 		case <-ctx.Done():
 		}
 	}()

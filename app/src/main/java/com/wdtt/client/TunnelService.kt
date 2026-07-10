@@ -74,7 +74,8 @@ class TunnelService : Service() {
                     captchaMode = sanitizeCaptchaMode(intent.getStringExtra("captcha_mode")),
                     captchaSolveMethod = intent.getStringExtra("captcha_solve_method") ?: "auto",
                     fingerprint = intent.getStringExtra("fingerprint") ?: "chrome",
-                    clientIds = intent.getStringExtra("client_ids") ?: "6287487,8202606"
+                    clientIds = intent.getStringExtra("client_ids") ?: "6287487,8202606",
+                    obfsMode = intent.getStringExtra("obfs_mode")?.takeIf { it == "video" } ?: "audio"
                 )
                 startTunnel(params)
             }
@@ -124,7 +125,8 @@ class TunnelService : Service() {
                     captchaMode = sanitizeCaptchaMode(store.captchaMode.first()),
                     captchaSolveMethod = store.captchaSolveMethod.first(),
                     fingerprint = store.selectedFingerprint.first(),
-                    clientIds = store.activeClientIds.first()
+                    clientIds = store.activeClientIds.first(),
+                    obfsMode = store.obfsMode.first()
                 )
                 if (params.peer.isNotEmpty() && params.vkHashes.isNotEmpty()) {
                     launch(Dispatchers.Main) {

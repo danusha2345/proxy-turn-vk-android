@@ -35,8 +35,6 @@ func LoadProfileFromDisk() (*SavedProfile, error) {
 	return &sp, nil
 }
 
-
-
 // profileList contains paired User-Agent and Client Hints strings.
 var profileList = []Profile{
 	// Windows Chrome

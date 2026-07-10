@@ -1853,7 +1853,7 @@ func obfsIsRTPPacket(wire []byte) bool {
 		return false
 	}
 	pt := wire[1] & 0x7F
-	return pt == 111
+	return pt == 111 || pt == 96
 }
 
 func listenWrapped(addr *net.UDPAddr, keys *wrapKeyStore) (dtlsnet.PacketListener, error) {
@@ -1937,10 +1937,14 @@ func (c *wrapPacketConn) ReadFrom(p []byte) (int, net.Addr, error) {
 		c.key = key
 		c.aead = aead
 		c.obfsCfg = NewObfsConfig()
+		// Отвечаем тем же типом RTP-потока, который выбрал клиент.
+		if len(raw) > 1 {
+			c.obfsCfg.PayloadType = raw[1] & 0x7F
+		}
 		c.obfsWrite = NewObfsState()
 		atomic.StoreInt32(&c.selected, 1)
 		if atomic.CompareAndSwapInt32(&c.authLog, 0, 1) {
-			log.Printf("[WRAP] OK: ключ выбран для %s (keys=%d)", addr.String(), c.keys.Count())
+			log.Printf("[WRAP] OK: ключ выбран для %s (keys=%d), PT=%d", addr.String(), c.keys.Count(), c.obfsCfg.PayloadType)
 		}
 		return m, addr, nil
 	}

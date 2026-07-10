@@ -50,13 +50,19 @@ type ObfsConfig struct {
 }
 
 // NewObfsConfig creates a config with random SSRC and sane defaults.
-func NewObfsConfig() *ObfsConfig {
+func NewObfsConfig(mode string) *ObfsConfig {
 	var buf [4]byte
 	rand.Read(buf[:])
+	payloadType := uint8(111)
+	paddingMax := 24
+	if mode == "video" {
+		payloadType = 96
+		paddingMax = 60
+	}
 	return &ObfsConfig{
 		SSRC:        binary.BigEndian.Uint32(buf[:]),
-		PayloadType: 111, // dynamic PT for OPUS
-		PaddingMax:  24,
+		PayloadType: payloadType,
+		PaddingMax:  paddingMax,
 	}
 }
 
@@ -224,7 +230,7 @@ func obfsIsRTPPacket(wire []byte) bool {
 	if (wire[0] >> 6) != 2 {
 		return false
 	}
-	// Our payload type = 111
+	// Audio uses PT=111, video uses PT=96.
 	pt := wire[1] & 0x7F
-	return pt == 111
+	return pt == 111 || pt == 96
 }

@@ -178,7 +178,7 @@ func RunSession(
 	var obfsCfg *ObfsConfig
 	var obfsWriteState *ObfsState
 	if useWrap {
-		obfsCfg = NewObfsConfig()
+		obfsCfg = NewObfsConfig(tp.ObfsMode)
 		obfsWriteState = NewObfsState()
 	}
 
@@ -320,6 +320,7 @@ func RunSession(
 	}
 
 	log.Printf("[ВОРКЕР #%d] [READY] Туннель готов к работе ✓", sessionID)
+	emitReady()
 
 	// Регистрация в диспетчере
 	slot := &WorkerSlot{

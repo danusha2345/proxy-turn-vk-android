@@ -92,6 +92,7 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
 
     val activeFingerprint by settingsStore.selectedFingerprint.collectAsStateWithLifecycle(initialValue = "chrome")
     val activeClientIds by settingsStore.activeClientIds.collectAsStateWithLifecycle(initialValue = "6287487,8202606")
+    val savedObfsMode by settingsStore.obfsMode.collectAsStateWithLifecycle(initialValue = "audio")
 
     val tunnelRunning by TunnelManager.running.collectAsStateWithLifecycle()
 
@@ -113,6 +114,7 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
     var workersInput by rememberSaveable { mutableFloatStateOf(18f) }
     var showHashesDialog by rememberSaveable { mutableStateOf(false) }
     var useVKCallsAuth by rememberSaveable { mutableStateOf(true) }
+    var obfsMode by rememberSaveable { mutableStateOf("audio") }
     var autoCaptchaEnabled by rememberSaveable { mutableStateOf(true) }
     var useWVCaptcha by rememberSaveable { mutableStateOf(false) }
     var isManualMode by rememberSaveable { mutableStateOf(true) }
@@ -201,6 +203,7 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
         serverWgPortInput = serverWgPort.toString()
         sniInput = sni
         useVKCallsAuth = vkAuthMode != "legacy"
+        obfsMode = savedObfsMode
         autoCaptchaEnabled = captchaMode == "auto"
         useWVCaptcha = captchaMode != "rjs"
         wbvManualMode = wbvCaptchaMethod != "auto"
@@ -330,6 +333,7 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
             putExtra("captcha_solve_method", effectiveCaptchaSolveMethod)
             putExtra("fingerprint", activeFingerprint)
             putExtra("client_ids", activeClientIds)
+            putExtra("obfs_mode", obfsMode)
         }
         if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent)
         else context.startService(intent)
@@ -538,6 +542,33 @@ fun SettingsTabContent(context: android.content.Context, scope: kotlinx.coroutin
                             ProtocolChip("Капча", !useVKCallsAuth, enabled = !tunnelRunning) {
                                 useVKCallsAuth = false
                                 scope.launch { settingsStore.saveVkAuthMode("legacy") }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Маскировка",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ProtocolChip("Аудио", obfsMode == "audio", enabled = !tunnelRunning) {
+                                obfsMode = "audio"
+                                scope.launch { settingsStore.saveObfsMode("audio") }
+                            }
+                            ProtocolChip("Видео", obfsMode == "video", enabled = !tunnelRunning) {
+                                obfsMode = "video"
+                                scope.launch { settingsStore.saveObfsMode("video") }
                             }
                         }
                     }
